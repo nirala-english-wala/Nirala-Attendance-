@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nirala English Wala - Attendance</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root{--navy:#0b3f67;--navy2:#0a3358;--blue:#1f6fb2;--gold:#d9a520;--ink:#14263a;--mute:#5d7088;--ok:#12a150;--bad:#d93a3a;--line:#d6e1ee;--soft:#e3edf8}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--navy);color:var(--ink);padding:16px}
+  [hidden]{display:none!important}
+  .logo{width:104px;height:104px;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.3);margin-bottom:10px}
+  .school{color:#fff;font-weight:700;font-size:17px;text-align:center;margin-bottom:14px}
+  .card{background:#fff;border-top:5px solid var(--gold);border-radius:16px;padding:22px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  h2{margin:0 0 6px;color:var(--navy)}
+  .mute{color:var(--mute);font-size:14px}
+  input,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);margin-top:12px}
+  input{font-size:20px;text-align:center}
+  input:focus{outline:2px solid var(--blue)}
+  button{background:var(--navy);color:#fff;border:0;cursor:pointer}
+  button.sec{background:var(--soft);color:var(--navy)}
+  button.go{background:var(--ok)}
+  button:disabled{opacity:.6}
+  button.lang{width:auto;padding:6px 14px;font-size:13px;margin-top:16px;background:rgba(255,255,255,.16);color:#fff}
+  .big{font-size:56px;line-height:1}
+  .msg{margin-top:12px;font-size:15px}
+  .err{color:var(--bad)}
+</style>
+</head>
+<body>
+<img class="logo" src="logo.png" alt="Nirala English Wala &amp; Arts">
+<div class="school">Nirala English Wala &amp; Arts</div>
+
+<div class="card">
+
+  <div id="vBad" hidden>
+    <div class="big">📷</div>
+    <h2 data-i="scanTitle"></h2>
+    <p class="mute" data-i="scanText"></p>
+  </div>
+
+  <div id="vRoll" hidden>
+    <h2 data-i="attendance"></h2>
+    <div class="mute" id="clsName"></div>
+    <input id="roll" inputmode="numeric" data-ph="rollPh" autocomplete="off">
+    <button id="checkBtn" data-i="next"></button>
+    <div class="msg err" id="rollErr"></div>
+  </div>
+
+  <div id="vConfirm" hidden>
+    <div class="mute" data-i="areYou"></div>
+    <h2 id="cName" style="margin-top:8px"></h2>
+    <div class="mute" id="cRoll"></div>
+    <button id="markBtn" class="go" data-i="confirm"></button>
+    <button id="backBtn" class="sec" data-i="back"></button>
+    <div class="msg err" id="markErr"></div>
+  </div>
+
+  <div id="vDone" hidden>
+    <div class="big">✅</div>
+    <h2 data-i="done"></h2>
+    <p class="mute" id="doneTxt"></p>
+  </div>
+
+</div>
+
+<button class="lang" id="langBtn" type="button"></button>
+
+<script type="module">
+import { db } from "./firebase-init.js";
+import { doc, getDoc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ---------- LANGUAGE (English / Hinglish) ---------- */
+const I18N = {
+  en: {
+    scanTitle: "Scan the QR",
+    scanText: "Scan the QR code shown on the teacher's screen with your phone camera, then come back here.",
+    attendance: "Attendance", rollPh: "Your roll number", next: "Continue",
+    errRoll: "Enter your roll number.", notFound: "This roll number was not found in this class.",
+    netErr: "Network problem. Please try again.",
+    areYou: "Is this you?", rollWord: "Roll", confirm: "Yes, mark my attendance", back: "No, go back",
+    done: "Attendance marked!",
+    already: r => `Today's attendance is already marked (Roll ${r}).`,
+    doneOk: (n, r) => `${n} (Roll ${r}) - today's attendance has been recorded.`,
+    denied: "Could not mark attendance: the QR has expired, or this roll's attendance is already marked. Scan the new QR or tell your teacher."
+  },
+  hi: {
+    scanTitle: "QR scan karo",
+    scanText: "Sir ke screen par jo QR dikh raha hai, use apne phone ke camera se scan karke yahan aao.",
+    attendance: "Attendance", rollPh: "Apna Roll No.", next: "Aage badho",
+    errRoll: "Roll number daalo.", notFound: "Ye roll number is class me nahi mila.",
+    netErr: "Net/connection problem. Dobara try karo.",
+    areYou: "Kya ye aap hain?", rollWord: "Roll", confirm: "Haan, attendance lagao", back: "Nahi, wapas jao",
+    done: "Attendance lag gayi!",
+    already: r => `Aaj ki attendance pehle hi lag chuki hai (Roll ${r}).`,
+    doneOk: (n, r) => `${n} (Roll ${r}) - aaj ki attendance darj ho gayi.`,
+    denied: "Nahi lag payi: QR expire ho gaya, ya is roll ki attendance pehle hi lag chuki hai. Naya QR scan karo ya sir se bolo."
+  }
+};
+let lang = localStorage.getItem("lang") === "hi" ? "hi" : "en";
+const t = (k, ...a) => { const v = I18N[lang][k] ?? I18N.en[k] ?? k; return typeof v === "function" ? v(...a) : v; };
+
+const $ = s => document.querySelector(s);
+const show = id => ["vBad", "vRoll", "vConfirm", "vDone"].forEach(v => $("#" + v).hidden = (v !== id));
+const cleanRoll = r => String(r).trim().replace(/[\/\s]+/g, "");
+
+// messages that must re-translate when the language is switched
+function setMsg(sel, key, ...args) { const e = $(sel); e.dataset.k = key; e.dataset.a = JSON.stringify(args); e.textContent = t(key, ...args); }
+function clearMsg(sel) { const e = $(sel); delete e.dataset.k; delete e.dataset.a; e.textContent = ""; }
+
+let student = null;
+function applyLang() {
+  document.documentElement.lang = lang === "en" ? "en" : "hi";
+  document.querySelectorAll("[data-i]").forEach(e => e.textContent = t(e.dataset.i));
+  document.querySelectorAll("[data-ph]").forEach(e => e.placeholder = t(e.dataset.ph));
+  document.querySelectorAll("[data-k]").forEach(e => e.textContent = t(e.dataset.k, ...JSON.parse(e.dataset.a || "[]")));
+  if (student) $("#cRoll").textContent = t("rollWord") + " " + student.roll;
+  $("#langBtn").textContent = lang === "en" ? "Hinglish" : "English";
+}
+$("#langBtn").onclick = () => { lang = lang === "en" ? "hi" : "en"; localStorage.setItem("lang", lang); applyLang(); };
+
+const p = new URLSearchParams(location.search);
+const sid = p.get("s"), token = p.get("t");
+const okFormat = sid && token && /^\d{4}-\d{2}-\d{2}_.+/.test(sid) && /^[0-9a-f]{20}$/.test(token);
+
+if (!okFormat) {
+  show("vBad");
+} else {
+  const date = sid.slice(0, 10), classId = sid.slice(11);
+  const doneKey = "att_done_" + date + "_" + classId;
+
+  // Already marked from this phone today? (soft check, the real limit is in the Firestore rules)
+  const prev = localStorage.getItem(doneKey);
+  if (prev) {
+    setMsg("#doneTxt", "already", prev);
+    show("vDone");
+  } else {
+    show("vRoll");
+    getDoc(doc(db, "classes", classId)).then(s => { if (s.exists()) $("#clsName").textContent = s.data().name; }).catch(() => {});
+  }
+
+  $("#checkBtn").onclick = async () => {
+    clearMsg("#rollErr");
+    const roll = cleanRoll($("#roll").value);
+    if (!roll) { setMsg("#rollErr", "errRoll"); return; }
+    $("#checkBtn").disabled = true;
+    try {
+      const s = await getDoc(doc(db, "students", `${classId}_${roll}`));
+      if (!s.exists()) { setMsg("#rollErr", "notFound"); return; }
+      student = s.data();
+      $("#cName").textContent = student.name;
+      $("#cRoll").textContent = t("rollWord") + " " + student.roll;
+      show("vConfirm");
+    } catch (e) {
+      setMsg("#rollErr", "netErr");
+    } finally { $("#checkBtn").disabled = false; }
+  };
+  $("#roll").addEventListener("keydown", e => { if (e.key === "Enter") $("#checkBtn").click(); });
+  $("#backBtn").onclick = () => { student = null; clearMsg("#markErr"); show("vRoll"); };
+
+  $("#markBtn").onclick = async () => {
+    if (!student) return;
+    clearMsg("#markErr");
+    $("#markBtn").disabled = true;
+    try {
+      await setDoc(doc(db, "attendance", `${date}_${classId}_${student.roll}`), {
+        sid, classId, date, roll: student.roll, name: student.name,
+        method: "qr", token, ts: serverTimestamp()
+      });
+      localStorage.setItem(doneKey, student.roll);
+      setMsg("#doneTxt", "doneOk", student.name, student.roll);
+      show("vDone");
+    } catch (e) {
+      setMsg("#markErr", (e && e.code === "permission-denied") ? "denied" : "netErr");
+    } finally { $("#markBtn").disabled = false; }
+  };
+}
+
+applyLang();
+</script>
+</body>
+</html>
