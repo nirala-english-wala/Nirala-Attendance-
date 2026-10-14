@@ -1,13 +1,14 @@
-// Firebase Console > Project settings > Your apps > Web app se config yahan paste karo
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyBN6ex-UPF83FdQBi3sg--wzwXi91OnVn0",
+  authDomain: "nirala-attendance.firebaseapp.com",
+  projectId: "nirala-attendance",
+  storageBucket: "nirala-attendance.firebasestorage.app",
+  messagingSenderId: "414075981234",
+  appId: "1:414075981234:web:54c749f71503dcb709e8ab"
 };
 
 export const app = initializeApp(firebaseConfig);
