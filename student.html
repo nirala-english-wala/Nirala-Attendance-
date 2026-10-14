@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attendance</title>
+<style>
+  :root{--bg:#f4f6fb;--ink:#1d2433;--mute:#6b7488;--pri:#2f5bea;--ok:#12a150;--bad:#d93a3a;--line:#e3e7f0}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:16px}
+  [hidden]{display:none!important}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;width:100%;max-width:380px;text-align:center}
+  h2{margin:0 0 6px}
+  .mute{color:var(--mute);font-size:14px}
+  input,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);margin-top:12px}
+  input{font-size:20px;text-align:center}
+  button{background:var(--pri);color:#fff;border:0;cursor:pointer}
+  button.sec{background:#e9edf8;color:var(--ink)}
+  button:disabled{opacity:.6}
+  .big{font-size:56px;line-height:1}
+  .msg{margin-top:12px;font-size:15px}
+  .err{color:var(--bad)}.ok{color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div id="vBad" hidden>
+    <div class="big">📷</div>
+    <h2>QR scan karo</h2>
+    <p class="mute">Sir ke screen par jo QR dikh raha hai, use apne phone ke camera se scan karke yahan aao.</p>
+  </div>
+
+  <div id="vRoll" hidden>
+    <h2>Attendance</h2>
+    <div class="mute" id="clsName"></div>
+    <input id="roll" inputmode="numeric" placeholder="Apna Roll No." autocomplete="off">
+    <button id="checkBtn">Aage badho</button>
+    <div class="msg err" id="rollErr"></div>
+  </div>
+
+  <div id="vConfirm" hidden>
+    <div class="mute">Kya ye aap hain?</div>
+    <h2 id="cName" style="margin-top:8px"></h2>
+    <div class="mute" id="cRoll"></div>
+    <button id="markBtn" style="background:var(--ok)">Haan, attendance lagao</button>
+    <button id="backBtn" class="sec">Nahi, wapas jao</button>
+    <div class="msg err" id="markErr"></div>
+  </div>
+
+  <div id="vDone" hidden>
+    <div class="big">✅</div>
+    <h2>Attendance lag gayi!</h2>
+    <p class="mute" id="doneTxt"></p>
+  </div>
+
+</div>
+
+<script type="module">
+import { db } from "./firebase-init.js";
+import { doc, getDoc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = s => document.querySelector(s);
+const show = id => ["vBad", "vRoll", "vConfirm", "vDone"].forEach(v => $("#" + v).hidden = (v !== id));
+const cleanRoll = r => String(r).trim().replace(/[\/\s]+/g, "");
+
+const p = new URLSearchParams(location.search);
+const sid = p.get("s"), token = p.get("t");
+const okFormat = sid && token && /^\d{4}-\d{2}-\d{2}_.+/.test(sid) && /^[0-9a-f]{20}$/.test(token);
+
+if (!okFormat) {
+  show("vBad");
+} else {
+  const date = sid.slice(0, 10), classId = sid.slice(11);
+  const doneKey = "att_done_" + date + "_" + classId;
+  let student = null;
+
+  // Isi phone se aaj pehle hi lag chuki hai? (soft check, asli rok Firestore rules me hai)
+  const prev = localStorage.getItem(doneKey);
+  if (prev) {
+    $("#doneTxt").textContent = `Aaj ki attendance pehle hi lag chuki hai (Roll ${prev}).`;
+    show("vDone");
+  } else {
+    show("vRoll");
+    getDoc(doc(db, "classes", classId)).then(s => { if (s.exists()) $("#clsName").textContent = s.data().name; }).catch(() => {});
+  }
+
+  $("#checkBtn").onclick = async () => {
+    $("#rollErr").textContent = "";
+    const roll = cleanRoll($("#roll").value);
+    if (!roll) { $("#rollErr").textContent = "Roll number daalo."; return; }
+    $("#checkBtn").disabled = true;
+    try {
+      const s = await getDoc(doc(db, "students", `${classId}_${roll}`));
+      if (!s.exists()) { $("#rollErr").textContent = "Ye roll number is class me nahi mila."; return; }
+      student = s.data();
+      $("#cName").textContent = student.name;
+      $("#cRoll").textContent = "Roll " + student.roll;
+      show("vConfirm");
+    } catch (e) {
+      $("#rollErr").textContent = "Net/connection problem. Dobara try karo.";
+    } finally { $("#checkBtn").disabled = false; }
+  };
+  $("#roll").addEventListener("keydown", e => { if (e.key === "Enter") $("#checkBtn").click(); });
+  $("#backBtn").onclick = () => { student = null; $("#markErr").textContent = ""; show("vRoll"); };
+
+  $("#markBtn").onclick = async () => {
+    if (!student) return;
+    $("#markErr").textContent = "";
+    $("#markBtn").disabled = true;
+    try {
+      await setDoc(doc(db, "attendance", `${date}_${classId}_${student.roll}`), {
+        sid, classId, date, roll: student.roll, name: student.name,
+        method: "qr", token, ts: serverTimestamp()
+      });
+      localStorage.setItem(doneKey, student.roll);
+      $("#doneTxt").textContent = `${student.name} (Roll ${student.roll}) - aaj ki attendance darj ho gayi.`;
+      show("vDone");
+    } catch (e) {
+      $("#markErr").textContent = (e && e.code === "permission-denied")
+        ? "Nahi lag payi: QR expire ho gaya, ya is roll ki attendance pehle hi lag chuki hai. Naya QR scan karo ya sir se bolo."
+        : "Net/connection problem. Dobara try karo.";
+    } finally { $("#markBtn").disabled = false; }
+  };
+}
+</script>
+</body>
+</html>
