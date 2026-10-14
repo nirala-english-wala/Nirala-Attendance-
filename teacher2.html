@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nirala English Wala - Attendance</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root{--navy:#0b3f67;--navy2:#0a3358;--blue:#1f6fb2;--gold:#d9a520;--bg:#eaf1f8;--card:#fff;--ink:#14263a;--mute:#5d7088;--ok:#12a150;--bad:#d93a3a;--line:#d6e1ee;--soft:#e3edf8}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  [hidden]{display:none!important}
+  header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:4px solid var(--gold)}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand img{width:44px;height:44px;border-radius:12px;background:#fff}
+  .brand b{display:block;font-size:16px;line-height:1.1}
+  .brand span{font-size:12px;opacity:.85}
+  main{max-width:900px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(11,63,103,.06)}
+  input,select,textarea,button{font:inherit;padding:9px 11px;border-radius:9px;border:1px solid var(--line)}
+  input,select,textarea{background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-offset:0}
+  textarea{width:100%;min-height:90px}
+  button{background:var(--navy);color:#fff;border:0;cursor:pointer}
+  button:hover{background:var(--blue)}
+  button.sec{background:var(--soft);color:var(--navy)}
+  button.sec:hover{background:#d3e3f4}
+  button.bad{background:var(--bad)}
+  button.ok{background:var(--ok)}
+  button.gold{background:var(--gold);color:#2a1d00;font-weight:700}
+  button.sm{padding:5px 9px;font-size:13px}
+  header button.sec{background:rgba(255,255,255,.16);color:#fff}
+  header select{max-width:150px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tabs button{background:var(--soft);color:var(--navy)}
+  .tabs button.on{background:var(--navy);color:#fff;box-shadow:inset 0 -3px 0 var(--gold)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mute);font-weight:600}
+  .tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:var(--soft)}
+  .tag.p{background:#dcf5e7;color:#0b6b35}.tag.a{background:#fde3e3;color:#9b1f1f}
+  .mute{color:var(--mute);font-size:13px}
+  #qrWrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+  #qr{background:#fff;padding:12px;border-radius:12px;border:3px solid var(--navy)}
+  #qrInfo{font-weight:600;text-align:center;color:var(--navy)}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+  .stat{background:var(--soft);color:var(--navy);border-left:4px solid var(--gold);border-radius:10px;padding:8px 14px;font-weight:700}
+  .login{max-width:360px;margin:40px auto;padding:0 14px;text-align:center}
+  .login img{width:112px;height:112px;border-radius:22px;background:#fff;box-shadow:0 6px 18px rgba(11,63,103,.25);margin-bottom:10px}
+  .login h1{margin:0 0 14px;font-size:20px;color:var(--navy)}
+  .login .card{text-align:left}
+  .login input{width:100%;margin-bottom:10px}
+  .err{color:var(--bad);font-size:14px;min-height:20px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login" class="login">
+  <img src="logo.png" alt="Nirala English Wala &amp; Arts">
+  <h1>Nirala English Wala &amp; Arts</h1>
+  <div class="card">
+    <h2 style="margin-top:0" data-i="loginTitle"></h2>
+    <input id="email" type="email" data-ph="email" autocomplete="username">
+    <input id="pass" type="password" data-ph="pass" autocomplete="current-password">
+    <button id="loginBtn" style="width:100%" data-i="login"></button>
+    <p class="err" id="loginErr"></p>
+    <div style="text-align:center"><button class="sec sm langBtn" type="button"></button></div>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app" hidden>
+  <header>
+    <div class="brand">
+      <img src="logo.png" alt="">
+      <div><b>Nirala English Wala &amp; Arts</b><span data-i="appTitle"></span></div>
+    </div>
+    <div class="row">
+      <select id="classSel"></select>
+      <button class="sec sm" id="addClassBtn" data-i="addClass"></button>
+      <button class="sec sm langBtn" type="button"></button>
+      <button class="sec sm" id="logoutBtn" data-i="logout"></button>
+    </div>
+  </header>
+  <main>
+    <div class="tabs">
+      <button data-tab="att" class="on" data-i="tabAtt"></button>
+      <button data-tab="stu" data-i="tabStu"></button>
+      <button data-tab="rep" data-i="tabRep"></button>
+    </div>
+
+    <!-- ATTENDANCE TAB -->
+    <section id="tab-att">
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <strong id="attTitle"></strong>
+            <div class="mute" data-i="qrHint"></div>
+          </div>
+          <div class="row">
+            <button id="startBtn" class="gold" data-i="start"></button>
+            <button id="endBtn" class="bad" hidden data-i="stop"></button>
+          </div>
+        </div>
+        <div id="qrWrap" hidden>
+          <div id="qr"></div>
+          <div id="qrInfo"></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat" id="statP"></div>
+        <div class="stat" id="statA"></div>
+        <div class="stat" id="statT"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <strong data-i="presentH"></strong>
+          <table><tbody id="presentList"></tbody></table>
+        </div>
+        <div class="card">
+          <strong data-i="absentH"></strong> <span class="mute" data-i="absentHint"></span>
+          <table><tbody id="absentList"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- STUDENTS TAB -->
+    <section id="tab-stu" hidden>
+      <div class="card">
+        <strong data-i="addStu"></strong>
+        <div class="row" style="margin-top:8px">
+          <input id="sRoll" data-ph="rollPh" style="width:110px">
+          <input id="sName" data-ph="namePh" style="flex:1;min-width:160px">
+          <button id="sAddBtn" data-i="add"></button>
+        </div>
+        <p class="mute" style="margin-bottom:4px" data-i="bulkHint"></p>
+        <textarea id="bulk" data-ph="bulkPh"></textarea>
+        <div class="row" style="margin-top:8px"><button id="bulkBtn" class="sec" data-i="bulkBtn"></button></div>
+      </div>
+      <div class="card">
+        <strong id="stuCount"></strong>
+        <table><tbody id="stuList"></tbody></table>
+      </div>
+    </section>
+
+    <!-- REPORT TAB -->
+    <section id="tab-rep" hidden>
+      <div class="card">
+        <div class="row">
+          <input type="date" id="repDate">
+          <button id="repBtn" data-i="show"></button>
+          <button id="csvBtn" class="sec" data-i="csv"></button>
+        </div>
+        <div class="stats" id="repStats"></div>
+        <table>
+          <thead><tr><th data-i="thRoll"></th><th data-i="thName"></th><th data-i="thStatus"></th><th data-i="thTime"></th><th data-i="thMethod"></th></tr></thead>
+          <tbody id="repList"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { db, auth } from "./firebase-init.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where,
+         writeBatch, serverTimestamp, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ---------- LANGUAGE (English / Hinglish) ---------- */
+const I18N = {
+  en: {
+    loginTitle: "Teacher Login", email: "Email", pass: "Password", login: "Login",
+    loginErr: "Login failed. Please check your email and password.",
+    appTitle: "Attendance Panel", addClass: "+ Class", logout: "Logout",
+    tabAtt: "Attendance", tabStu: "Students", tabRep: "Report",
+    qrHint: "A new QR appears every 2.5 minutes, 4 QR codes in total (10 min).",
+    start: "Start attendance", stop: "Stop",
+    presentH: "Present", absentH: "Absent", absentHint: "(mark here if a student has no phone)",
+    addStu: "Add student", rollPh: "Roll no.", namePh: "Name", add: "Add",
+    bulkHint: "Or add many at once (one per line: roll, name)",
+    bulkPh: "1, Rahul Kumar\n2, Priya Singh\n3, Amit Raj", bulkBtn: "Bulk add",
+    show: "Show", csv: "Download CSV",
+    thRoll: "Roll", thName: "Name", thStatus: "Status", thTime: "Time", thMethod: "Method",
+    stP: n => `Present: ${n}`, stA: n => `Absent: ${n}`, stT: n => `Total: ${n}`,
+    stuCount: n => `Students (${n})`,
+    title: (c, d) => `${c} - today (${d})`, makeClass: "First create a class (+ Class)",
+    remove: "Remove", markPresent: "Mark present", byTeacher: "marked by teacher", viaQR: "QR",
+    noStudents: "No students yet. Add them above.", nobody: "Nobody has arrived yet.", allPresent: "Everyone is present.",
+    pickClass: "Please select a class first.", addStudentsFirst: "Please add students first.",
+    promptClass: "Class name (for example: Class 12 PCM)", needLetters: "Use some letters or numbers in the name.",
+    needRollName: "Enter both roll number and name.", noValid: "No valid line found. Format: roll, name",
+    bulkDone: n => `${n} students added.`,
+    confirmDel: r => `Remove roll ${r}?`, confirmUnmark: "Remove this student's attendance?",
+    confirmRunning: "A session is already running for this class. Start a new one?",
+    confirmEnd: "Stop attendance now?", pressShow: "Press 'Show' first.",
+    qrOf: (i, nx) => `QR ${i}/4 · next QR in: ${nx}`, qrLeft: l => `Attendance closes in: ${l}`,
+    manual: "Manual", qr: "QR"
+  },
+  hi: {
+    loginTitle: "Sir Login", email: "Email", pass: "Password", login: "Login",
+    loginErr: "Login fail: email/password check karo.",
+    appTitle: "Attendance Panel", addClass: "+ Class", logout: "Logout",
+    tabAtt: "Attendance", tabStu: "Students", tabRep: "Report",
+    qrHint: "QR har 2.5 min me badlega, total 4 QR (10 min).",
+    start: "Attendance shuru karo", stop: "Band karo",
+    presentH: "Present", absentH: "Absent", absentHint: "(phone nahi to yahan se lagao)",
+    addStu: "Student add karo", rollPh: "Roll no.", namePh: "Naam", add: "Add",
+    bulkHint: "Ya ek saath bahut saare (har line me: roll, naam)",
+    bulkPh: "1, Rahul Kumar\n2, Priya Singh\n3, Amit Raj", bulkBtn: "Bulk add",
+    show: "Dikhao", csv: "CSV download",
+    thRoll: "Roll", thName: "Naam", thStatus: "Status", thTime: "Time", thMethod: "Tarika",
+    stP: n => `Present: ${n}`, stA: n => `Absent: ${n}`, stT: n => `Total: ${n}`,
+    stuCount: n => `Students (${n})`,
+    title: (c, d) => `${c} - aaj (${d})`, makeClass: "Pehle ek class banao (+ Class)",
+    remove: "Hatao", markPresent: "Present lagao", byTeacher: "sir ne lagayi", viaQR: "QR",
+    noStudents: "Abhi koi student nahi. Upar se add karo.", nobody: "Abhi koi nahi aaya.", allPresent: "Sab present hain.",
+    pickClass: "Pehle class chuno.", addStudentsFirst: "Pehle students add karo.",
+    promptClass: "Class ka naam (jaise: Class 12 PCM)", needLetters: "Naam me kuch letters/numbers daalo.",
+    needRollName: "Roll aur naam dono daalo.", noValid: "Koi valid line nahi mili. Format: roll, naam",
+    bulkDone: n => `${n} students add ho gaye.`,
+    confirmDel: r => `Roll ${r} ko hataana hai?`, confirmUnmark: "Is student ki attendance hataani hai?",
+    confirmRunning: "Is class ka session abhi chal raha hai. Naya shuru karein?",
+    confirmEnd: "Attendance abhi band kar dein?", pressShow: "Pehle 'Dikhao' dabao.",
+    qrOf: (i, nx) => `QR ${i}/4 · agla QR: ${nx}`, qrLeft: l => `Attendance band hone me: ${l}`,
+    manual: "Manual", qr: "QR"
+  }
+};
+let lang = localStorage.getItem("lang") === "hi" ? "hi" : "en";
+const t = (k, ...a) => { const v = I18N[lang][k] ?? I18N.en[k] ?? k; return typeof v === "function" ? v(...a) : v; };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const today = () => new Date().toLocaleDateString("en-CA");           // YYYY-MM-DD (device local date)
+const slug = s => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const cleanRoll = r => String(r).trim().replace(/[\/\s]+/g, "");
+const byRoll = (a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true });
+const fmtTime = ts => ts?.toDate ? ts.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+const randToken = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b.toString(16).padStart(2, "0")).join("");
+
+const WINDOW = 10 * 60 * 1000;   // total attendance time
+const STEP   = 2.5 * 60 * 1000;  // life of each QR (4 QR codes)
+const GRACE  = 10 * 1000;        // small overlap when QR changes
+
+let classes = [], classId = null, students = [], att = [];
+let session = null, tickTimer = null, shownIdx = -1, repRows = [];
+let classUnsubs = [], classesUnsub = null;
+
+function applyLang() {
+  document.documentElement.lang = lang === "en" ? "en" : "hi";
+  document.querySelectorAll("[data-i]").forEach(e => e.textContent = t(e.dataset.i));
+  document.querySelectorAll("[data-ph]").forEach(e => e.placeholder = t(e.dataset.ph));
+  document.querySelectorAll(".langBtn").forEach(b => b.textContent = lang === "en" ? "Hinglish" : "English");
+  render(); tick(); renderReport();
+}
+document.querySelectorAll(".langBtn").forEach(b => b.onclick = () => {
+  lang = lang === "en" ? "hi" : "en";
+  localStorage.setItem("lang", lang);
+  applyLang();
+});
+
+/* ---------- AUTH ---------- */
+$("#loginBtn").onclick = async () => {
+  $("#loginErr").textContent = "";
+  try { await signInWithEmailAndPassword(auth, $("#email").value.trim(), $("#pass").value); }
+  catch (e) { $("#loginErr").textContent = t("loginErr"); }
+};
+$("#pass").addEventListener("keydown", e => { if (e.key === "Enter") $("#loginBtn").click(); });
+$("#logoutBtn").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, u => {
+  $("#login").hidden = !!u;
+  $("#app").hidden = !u;
+  if (u) init(); else cleanup();
+});
+
+function cleanup() {
+  classUnsubs.forEach(f => f()); classUnsubs = [];
+  if (classesUnsub) { classesUnsub(); classesUnsub = null; }
+  stopTicker();
+  classId = null; students = []; att = []; classes = [];
+}
+
+/* ---------- INIT / CLASSES ---------- */
+function init() {
+  if (classesUnsub) return;
+  classesUnsub = onSnapshot(collection(db, "classes"), snap => {
+    classes = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+    $("#classSel").innerHTML = classes.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+    if (!classes.length) { classId = null; render(); return; }
+    const want = classId && classes.some(c => c.id === classId) ? classId
+               : (localStorage.getItem("lastClass") && classes.some(c => c.id === localStorage.getItem("lastClass")) ? localStorage.getItem("lastClass") : classes[0].id);
+    $("#classSel").value = want;
+    if (want !== classId) selectClass(want);
+  });
+}
+
+$("#classSel").onchange = e => selectClass(e.target.value);
+
+$("#addClassBtn").onclick = async () => {
+  const name = prompt(t("promptClass"));
+  if (!name || !name.trim()) return;
+  const id = slug(name);
+  if (!id) return alert(t("needLetters"));
+  await setDoc(doc(db, "classes", id), { name: name.trim() });
+  localStorage.setItem("lastClass", id);
+  selectClass(id);
+};
+
+function selectClass(id) {
+  classId = id;
+  localStorage.setItem("lastClass", id);
+  classUnsubs.forEach(f => f()); classUnsubs = [];
+  stopTicker();
+  students = []; att = [];
+
+  classUnsubs.push(onSnapshot(query(collection(db, "students"), where("classId", "==", id)), snap => {
+    students = snap.docs.map(d => d.data()).sort(byRoll);
+    render();
+  }));
+  classUnsubs.push(onSnapshot(query(collection(db, "attendance"), where("classId", "==", id), where("date", "==", today())), snap => {
+    att = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    render();
+  }));
+  loadSession();
+  render();
+}
+
+/* ---------- TABS ---------- */
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["att", "stu", "rep"].forEach(x => $("#tab-" + x).hidden = (x !== b.dataset.tab));
+});
+
+/* ---------- RENDER ---------- */
+function render() {
+  const cls = classes.find(c => c.id === classId);
+  $("#attTitle").textContent = cls ? t("title", cls.name, today()) : t("makeClass");
+
+  // Students
+  $("#stuCount").textContent = t("stuCount", students.length);
+  $("#stuList").innerHTML = students.map(s =>
+    `<tr><td>${esc(s.roll)}</td><td>${esc(s.name)}</td>
+     <td style="text-align:right"><button class="bad sm" data-del="${esc(s.roll)}">${t("remove")}</button></td></tr>`).join("")
+    || `<tr><td class="mute">${t("noStudents")}</td></tr>`;
+
+  // Attendance
+  const map = new Map(att.map(a => [a.roll, a]));
+  const present = students.filter(s => map.has(s.roll));
+  const absent = students.filter(s => !map.has(s.roll));
+  $("#statP").textContent = t("stP", present.length);
+  $("#statA").textContent = t("stA", absent.length);
+  $("#statT").textContent = t("stT", students.length);
+  $("#presentList").innerHTML = present.map(s => {
+    const a = map.get(s.roll);
+    return `<tr><td>${esc(s.roll)}</td><td>${esc(s.name)}<div class="mute">${fmtTime(a.ts)} ${a.method === "manual" ? "· " + t("byTeacher") : "· " + t("viaQR")}</div></td>
+      <td style="text-align:right"><button class="sec sm" data-unmark="${esc(a._id)}">${t("remove")}</button></td></tr>`;
+  }).join("") || `<tr><td class="mute">${t("nobody")}</td></tr>`;
+  $("#absentList").innerHTML = absent.map(s =>
+    `<tr><td>${esc(s.roll)}</td><td>${esc(s.name)}</td>
+     <td style="text-align:right"><button class="ok sm" data-mark="${esc(s.roll)}">${t("markPresent")}</button></td></tr>`).join("")
+    || `<tr><td class="mute">${t("allPresent")}</td></tr>`;
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.del) {
+    if (!confirm(t("confirmDel", b.dataset.del))) return;
+    await deleteDoc(doc(db, "students", `${classId}_${b.dataset.del}`));
+  } else if (b.dataset.mark) {
+    const s = students.find(x => x.roll === b.dataset.mark); if (!s) return;
+    const d = today();
+    await setDoc(doc(db, "attendance", `${d}_${classId}_${s.roll}`), {
+      sid: `${d}_${classId}`, classId, date: d, roll: s.roll, name: s.name,
+      method: "manual", token: "", ts: serverTimestamp()
+    });
+  } else if (b.dataset.unmark) {
+    if (!confirm(t("confirmUnmark"))) return;
+    await deleteDoc(doc(db, "attendance", b.dataset.unmark));
+  }
+});
+
+/* ---------- STUDENTS ---------- */
+$("#sAddBtn").onclick = async () => {
+  if (!classId) return alert(t("pickClass"));
+  const roll = cleanRoll($("#sRoll").value), name = $("#sName").value.trim();
+  if (!roll || !name) return alert(t("needRollName"));
+  await setDoc(doc(db, "students", `${classId}_${roll}`), { classId, roll, name });
+  $("#sRoll").value = ""; $("#sName").value = ""; $("#sRoll").focus();
+};
+
+$("#bulkBtn").onclick = async () => {
+  if (!classId) return alert(t("pickClass"));
+  const lines = $("#bulk").value.split("\n").map(l => l.trim()).filter(Boolean);
+  const items = [];
+  for (const l of lines) {
+    const m = l.match(/^([^,\t\s]+)\s*[,\t ]\s*(.+)$/);
+    if (m) { const roll = cleanRoll(m[1]); if (roll) items.push({ roll, name: m[2].trim() }); }
+  }
+  if (!items.length) return alert(t("noValid"));
+  for (let i = 0; i < items.length; i += 400) {
+    const b = writeBatch(db);
+    items.slice(i, i + 400).forEach(it => b.set(doc(db, "students", `${classId}_${it.roll}`), { classId, roll: it.roll, name: it.name }));
+    await b.commit();
+  }
+  $("#bulk").value = "";
+  alert(t("bulkDone", items.length));
+};
+
+/* ---------- QR SESSION ---------- */
+async function loadSession() {
+  session = null;
+  try {
+    const snap = await getDoc(doc(db, "sessions", `${today()}_${classId}`));
+    if (snap.exists() && Date.now() < snap.data().startMs + WINDOW) {
+      session = { sid: snap.id, startMs: snap.data().startMs, tokens: snap.data().tokens };
+      runTicker();
+    }
+  } catch (e) { console.error(e); }
+}
+
+$("#startBtn").onclick = async () => {
+  if (!classId) return alert(t("pickClass"));
+  if (!students.length) return alert(t("addStudentsFirst"));
+  const d = today(), sid = `${d}_${classId}`;
+  const ref = doc(db, "sessions", sid);
+  const old = await getDoc(ref);
+  const running = old.exists() && Date.now() < old.data().startMs + WINDOW;
+  if (running && !confirm(t("confirmRunning"))) return;
+
+  const startMs = Date.now();
+  const tokens = Array.from({ length: 4 }, randToken);
+  const b = writeBatch(db);
+  if (old.exists()) (old.data().tokens || []).forEach(x => b.delete(doc(db, "sessions", sid, "tokens", x)));
+  b.set(ref, { sid, classId, date: d, startMs, tokens });
+  tokens.forEach((x, i) => b.set(doc(db, "sessions", sid, "tokens", x), {
+    validFrom: Timestamp.fromMillis(startMs + i * STEP - GRACE),
+    validUntil: Timestamp.fromMillis(startMs + (i + 1) * STEP + GRACE)
+  }));
+  await b.commit();
+  session = { sid, startMs, tokens };
+  runTicker();
+};
+
+$("#endBtn").onclick = async () => {
+  if (!session || !confirm(t("confirmEnd"))) return;
+  const { sid, tokens } = session;
+  const b = writeBatch(db);
+  tokens.forEach(x => b.delete(doc(db, "sessions", sid, "tokens", x)));
+  await b.commit();
+  stopTicker();
+};
+
+function runTicker() {
+  clearInterval(tickTimer);
+  shownIdx = -1;
+  $("#qrWrap").hidden = false; $("#startBtn").hidden = true; $("#endBtn").hidden = false;
+  tick();
+  tickTimer = setInterval(tick, 500);
+}
+
+function stopTicker() {
+  clearInterval(tickTimer); tickTimer = null; session = null; shownIdx = -1;
+  $("#qrWrap").hidden = true; $("#startBtn").hidden = false; $("#endBtn").hidden = true;
+  $("#qr").innerHTML = "";
+}
+
+function tick() {
+  if (!session) return;
+  const el = Date.now() - session.startMs;
+  if (el >= WINDOW) { stopTicker(); return; }
+  const idx = Math.min(3, Math.floor(el / STEP));
+  if (idx !== shownIdx) { shownIdx = idx; drawQR(session.tokens[idx]); }
+  $("#qrInfo").innerHTML = `${t("qrOf", idx + 1, idx < 3 ? mmss(STEP - (el % STEP)) : "-")}<br>
+    <span class="mute">${t("qrLeft", mmss(WINDOW - el))}</span>`;
+}
+
+function drawQR(token) {
+  const url = new URL("student2.html", location.href);
+  url.search = "";
+  url.searchParams.set("s", session.sid);
+  url.searchParams.set("t", token);
+  const box = $("#qr"); box.innerHTML = "";
+  const size = Math.min(300, window.innerWidth - 80);
+  new QRCode(box, { text: url.toString(), width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+}
+
+/* ---------- REPORT ---------- */
+$("#repDate").value = today();
+
+function renderReport() {
+  if (!repRows.length) { $("#repStats").innerHTML = ""; $("#repList").innerHTML = ""; return; }
+  const p = repRows.filter(r => r.present).length;
+  $("#repStats").innerHTML = `<div class="stat">${t("stP", p)}</div><div class="stat">${t("stA", repRows.length - p)}</div><div class="stat">${t("stT", repRows.length)}</div>`;
+  $("#repList").innerHTML = repRows.map(r => `<tr><td>${esc(r.roll)}</td><td>${esc(r.name)}</td>
+    <td><span class="tag ${r.present ? "p" : "a"}">${r.present ? "Present" : "Absent"}</span></td><td>${esc(r.time)}</td><td>${esc(r.method ? t(r.method) : "")}</td></tr>`).join("");
+}
+
+$("#repBtn").onclick = async () => {
+  if (!classId) return alert(t("pickClass"));
+  const d = $("#repDate").value; if (!d) return;
+  const snap = await getDocs(query(collection(db, "attendance"), where("classId", "==", classId), where("date", "==", d)));
+  const m = new Map(snap.docs.map(x => [x.data().roll, x.data()]));
+  repRows = students.map(s => {
+    const a = m.get(s.roll);
+    return { roll: s.roll, name: s.name, present: !!a, time: a ? fmtTime(a.ts) : "", method: a ? (a.method === "manual" ? "manual" : "qr") : "" };
+  });
+  renderReport();
+};
+
+$("#csvBtn").onclick = () => {
+  if (!repRows.length) return alert(t("pressShow"));
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = ["Roll,Name,Status,Time,Method", ...repRows.map(r => [r.roll, r.name, r.present ? "Present" : "Absent", r.time, r.method === "manual" ? "Manual" : r.method === "qr" ? "QR" : ""].map(q).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+  a.download = `attendance_${classId}_${$("#repDate").value}.csv`;
+  a.click();
+};
+
+applyLang();
+</script>
+</body>
+</html>
